@@ -145,7 +145,7 @@ def sample_sac_params(trial):
     :param trial: (optuna.trial)
     :return: (dict)
     """
-    gamma = trial.suggest_categorical('gamma', [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999])
+    gamma = trial.suggest_categorical('gamma', [0.95, 0.98, 0.99, 0.995, 0.999, 0.9999])
     learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1)
     batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128, 256, 512])
     buffer_size = trial.suggest_categorical('buffer_size', [int(1e4), int(1e5), int(1e6)])
@@ -160,7 +160,8 @@ def sample_sac_params(trial):
     # ent_coef = trial.suggest_categorical('ent_coef', ['auto', 0.5, 0.1, 0.05, 0.01, 0.0001])
     ent_coef = 'auto'
     log_std_init = trial.suggest_uniform('log_std_init', -4, 1)
-    net_arch = trial.suggest_categorical('net_arch', [64, 256])
+    net_arch = trial.suggest_categorical('net_arch', [64, 128])
+    #net_arch = trial.suggest_categorical('net_arch', [64, 128, 256])
     # activation_fn = trial.suggest_categorical('activation_fn', [nn.Tanh, nn.ReLU, nn.ELU, nn.LeakyReLU])
     target_entropy = 'auto'
     # if ent_coef == 'auto':
