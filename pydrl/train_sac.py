@@ -79,7 +79,7 @@ hyperparams_dict = {
     'device':'cuda',
     'seed':0,
     'target_entropy':"auto",
-    'policy_kwargs':dict(net_arch=[64, 64]),
+    'policy_kwargs':dict(net_arch=[8, 8]),
 }
 
 model = SAC('MlpPolicy', 
@@ -89,8 +89,8 @@ model = SAC('MlpPolicy',
             )
 
 # Train
-#model = model.load("./modelSAC")
-total_timesteps = 500000
+model = model.load("./modelSAC")
+total_timesteps = 100000
 with ProgressBarManager(total_timesteps) as progress_callback:
     callback = CallbackList([progress_callback,
                              eval_callback])
@@ -104,19 +104,24 @@ model.save("./modelSAC")
 #
 saved_acts = []
 saved_obs = []
+saved_pos = []
+saved_vel = []
+saved_acc = []
 saved_steps = []
+saved_epRollingReward = []
 saved_ep_num = []
 saved_epTotalrewards = []
 saved_eplen = []
 epMissDistance = []
 
-renderFlag = 1
+renderFlag = 0
 eplen = 0
 epRollingReward = 0
 num_episodes = 0
-max_eps = 1
+max_eps = 100
 obs = env.reset()
 timesteps = 100000
+hit_counter = 0
 pbar = tqdm(total=timesteps)
 
 for i in range(timesteps):
@@ -130,15 +135,21 @@ for i in range(timesteps):
     epRollingReward += rewards
     eplen += 1
 
-    saved_acts.append(action) 
+    saved_acts.append(action * eval_env.ctrl_limit) 
     saved_obs.append(obs) 
+    saved_pos.append(obs[0]) 
+    saved_vel.append(obs[1]) 
+    saved_acc.append(obs[2]) 
     saved_steps.append(i)
+    saved_epRollingReward.append(epRollingReward)
 
     if dones:
         pbar.write(f"Ep{num_episodes} EpReward = {epRollingReward:.2f},\
-                EpLen = {eplen}, MissDis = {info['error']:.2f}",)
+                EpLen = {eplen}, MissDis = {info['delta_position']}",)
 
-        epMissDistance.append(info["error"])
+        epMissDistance.append(info["delta_position"])
+        if info["delta_position"] < 0.05:
+            hit_counter += 1
 
         saved_ep_num.append(num_episodes)
         num_episodes += 1 
@@ -157,7 +168,8 @@ eval_env.close()
 mean_reward = np.mean(saved_epTotalrewards)
 std_reward  = np.std(saved_epTotalrewards)
 mean_miss   = np.mean(epMissDistance)
-print(f"Total Eps({num_episodes}): mean_reward = {mean_reward:.2f} +/- {std_reward:.2f}")
+hit_ratio   = hit_counter / len(epMissDistance)
+print(f"Total Eps({num_episodes}): mean_reward = {mean_reward:.2f} +/- {std_reward:.2f}, Hit%:{hit_ratio}")
 
 fig, ax = plt.subplots(4, sharex=True)
 ax[0].plot( saved_steps, [ob[0] for ob in saved_obs] )
@@ -177,8 +189,35 @@ ax[0].set_title("epRollingrewards")
 ax[1].plot( saved_ep_num, saved_eplen )
 ax[1].set_title("saved_eplen")
 ax[2].plot( saved_ep_num, epMissDistance)
-ax[2].set_title("epMissDistance")
+ax[2].set_title(f"epMissDistance (Hit Ratio: {hit_ratio})")
 fig.savefig("rewards.png")
+
+
+obs_in_ep = np.split(np.array(saved_obs), max_eps)
+pos_in_ep = np.split(np.array(saved_pos), max_eps)
+vel_in_ep = np.split(np.array(saved_vel), max_eps)
+acc_in_ep = np.split(np.array(saved_acc), max_eps)
+act_in_ep = np.split(np.array(saved_acts), max_eps)
+rew_in_ep = np.split(np.array(saved_epRollingReward), max_eps)
+steps     = np.linspace(0, 1, 100)
+
+fig, ax = plt.subplots(4, sharex=True)
+for i in range(len(pos_in_ep)):
+    ax[0].plot( steps, pos_in_ep[i] )
+    ax[1].plot( steps, vel_in_ep[i] )
+    ax[2].plot( steps, acc_in_ep[i] )
+    ax[3].plot( steps, act_in_ep[i] )
+ax[0].set_title("Position")
+ax[1].set_title("Velocity")
+ax[2].set_title("Acceleration")
+#fig.savefig("states_by_ep.png")
+
+fig, ax = plt.subplots(1, sharex=True)
+for i in range(len(pos_in_ep)):
+    ax.plot( steps, rew_in_ep[i] )
+ax.set_title("Ep Reward")
+#fig.savefig("reward_by_ep.png")
+
 
 #if __name__ == "__main__":
 #    main()

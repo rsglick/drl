@@ -18,19 +18,20 @@ class onedof(gym.Env):
     reward_range = (-float('inf'), float('inf'))
 
     def __init__(self, ctrl_limit=10, seed=None, n_axis=1,
-                 total_time=1, dt=0.01, aimpoint=0,
-                 integration="euler", custom_reward_fn=None):
+                 total_time=1, dt=0.01, integration="euler", 
+                 target_start_pos=0, target_ctrl=0,
+                 custom_reward_fn=None):
         self.seed(seed)
         self.viewer = None
 
         self.total_time        = total_time
         self.dt                = dt
         self.max_episode_steps = self.total_time/self.dt
+        self.episode_step      = 0
+
         self.integration       = integration
         self.custom_reward_fn  = custom_reward_fn
 
-        self.aimpoint          = aimpoint
-        self.episode_step      = 0
 
         #
         # Initialize state
@@ -40,25 +41,50 @@ class onedof(gym.Env):
         pos = np.random.uniform(-1, 1, self.n_axis)
         vel = np.zeros_like(pos)
         acc = np.zeros_like(pos)
-        self.init_states = np.array( [pos, vel, acc] )
+        self.init_states = np.array( [pos, vel, acc] ).flatten()
         self.state = self.init_states.copy()
 
         # Initialilze contrl params 
         self.ctrl          = np.zeros( (self.n_axis,) )
         self.ctrl_limit    = ctrl_limit
 
-        act_space = 1
-        obs_space = 1
+
+        #
+        # Initialize target state
+        #
+        self.target_start_pos = target_start_pos
+        target_pos = np.ones_like(pos) * self.target_start_pos
+        target_vel = np.zeros_like(target_pos)
+        target_acc = np.zeros_like(target_pos)
+        self.target_init_states = np.array( [target_pos, target_vel, target_acc] ).flatten()
+        self.target_state = self.target_init_states.copy()
+
+        # Initialilze target contrl params 
+        self.target_ctrl_scale = target_ctrl
+        self.target_ctrl  = np.ones( (self.n_axis,) ) * self.target_ctrl_scale
+
+        # Setup Gym Observation Min/Max Space
+        max_pos = np.inf
+        max_vel = np.inf
+        max_acc = np.inf
+        self.high_state = np.array([ max_pos, max_vel, max_acc]) 
+        self.low_state = - self.high_state
+
+        # Setup Gym Action Min/Max Space
+        #   Action space is normalized around -1 and 1
+        max_act =  1
+        min_act = -1
+
         self.action_space = spaces.Box(
-            low=-act_space,
-            high=act_space, 
+            low=min_act,
+            high=max_act, 
             shape=self.ctrl.shape,
             dtype=np.float32
         )
         self.observation_space = spaces.Box(
-            low=-obs_space,
-            high=obs_space,
-            shape=self.state.shape,
+            low=self.low_state,
+            high=self.high_state,
+            #shape=self.state.shape,
             dtype=np.float32
         )
 
@@ -122,13 +148,13 @@ class onedof(gym.Env):
 
             # Terminal Rewards
             term_reward =  0.0
-            reward_gain = 1000.0
+            reward_gain = 100.0
             if self.episode_step == self.max_episode_steps:
-                term_reward = (- reward_gain * error * error).item()
+                term_reward = ( - reward_gain * delta_position * delta_position).item()
 
             reward += term_reward
             
-            info = {"error":error, "term_reward":term_reward}
+            info = {"delta_position":delta_position, "term_reward":term_reward}
             
             return reward, info
 
@@ -136,22 +162,35 @@ class onedof(gym.Env):
         #from IPython import embed; embed()
         self.episode_step += 1
 
-        # Scale up action
+        # Capture previous action and unnormalize new action 
         previous_ctrl       = self.ctrl[0]
         self.ctrl[0]        = action * self.ctrl_limit
         
 
         last_state = self.state.copy()
+        target_last_state = self.target_state.copy()
         # RK4 Integration to calculate updated states
         if self.integration is "rk4":
-            self.state = rk4(last_state, self.ctrl, self.dt)
-
+            self.state        = rk4(last_state, self.ctrl, self.dt)
+            self.target_state = rk4( target_last_state, self.target_ctrl, self.dt )
+                
         # Euler Integration to calculate updated states
         elif self.integration is "euler":
-            self.state = euler(last_state, self.ctrl, self.dt)
+            self.state        = euler(last_state, self.ctrl, self.dt)
+            self.target_state = euler( target_last_state, self.target_ctrl, self.dt )
 
-        # Capture current position error to aimpoint
-        error = np.abs(self.state[0] - self.aimpoint)
+        # Delta Pos and Vel
+        delta_position = self.target_state[0] - self.state[0]
+        delta_velocity = self.target_state[1] - self.state[1]
+        
+        ### Distance between target and vehicle
+        ##r_tm = np.sqrt( ( delta_position ** 2 ) )
+        ##
+        ### closing velocity 
+        ##vc = - ( delta_position * delta_velocity ) / r_tm
+
+        ### line of sight rate
+        ##los_rate = (delta_position * delta_velocity)/r_tm**2
 
         # Reward Function
         if self.custom_reward_fn is None:
@@ -165,7 +204,7 @@ class onedof(gym.Env):
         else:
             done = False
 
-        return self.state, reward, done, info
+        return self.state.flatten(), reward, done, info
 
     def reset(self):
         """Resets the state of the environment and returns an initial observation.
@@ -182,11 +221,23 @@ class onedof(gym.Env):
         pos = np.random.uniform(-1, 1, self.n_axis)
         vel = np.zeros_like(pos)
         acc = np.zeros_like(pos)
-        self.init_states = np.array( [pos, vel, acc] )
+        self.init_states = np.array( [pos, vel, acc] ).flatten()
         self.state = self.init_states.copy()
 
         # Initialilze contrl params 
         self.ctrl = np.zeros( (self.n_axis,) )
+
+        #
+        # Initialize target state
+        #
+        target_pos = np.ones_like(pos) * self.target_start_pos
+        target_vel = np.zeros_like(target_pos)
+        target_acc = np.zeros_like(target_pos)
+        self.target_init_states = np.array( [target_pos, target_vel, target_acc] ).flatten()
+        self.target_state = self.target_init_states.copy()
+
+        # Initialilze target contrl params 
+        self.target_ctrl  = np.ones( (self.n_axis,) ) * self.target_ctrl_scale
 
 
         if self.viewer is not None:
@@ -229,15 +280,27 @@ class onedof(gym.Env):
 
         if self.viewer is None:
             fig, ax = plt.subplots(2, sharex=True)
-            plt.show(block=False)
+            #plt.show(block=False)
             self.viewer = (fig, ax)
-            self.viewer[1][0].set_xlabel("Steps")
-            self.viewer[1][0].set_ylabel("Pos")
-            self.viewer[1][1].set_ylabel("Ctrl")
-            self.viewer[1][0].plot( self.max_episode_steps, self.aimpoint, 'om')
-        self.viewer[1][0].plot( self.episode_step, self.state[0], 'xb' )
-        self.viewer[1][1].plot( self.episode_step, self.ctrl[0], 'xb' )
-        #self.viewer[0].canvas.draw()
+            self.viewer[0].suptitle(__name__)
+            self.viewer[1][0].set_ylabel("Ctrl")
+            self.viewer[1][1].set_ylabel("Pos")
+            #self.viewer[1][2].set_ylabel("Vel")
+            #self.viewer[1][3].set_ylabel("Acc")
+            self.viewer[1][-1].set_xlabel("Steps")
+
+        if self.n_axis == 1:
+            self.viewer[1][0].plot( self.episode_step, self.ctrl[0], 'xb', label="Veh" )
+            self.viewer[1][0].plot( self.episode_step, self.target_ctrl[0], 'om', label="Tar" )
+            self.viewer[1][1].plot( self.episode_step, self.state[0], 'xb' )
+            self.viewer[1][1].plot( self.episode_step, self.target_state[0], 'om' )
+            #self.viewer[1][2].plot( self.episode_step, self.state[1], 'xb' )
+            #self.viewer[1][2].plot( self.episode_step, self.target_state[1], 'om' )
+            #self.viewer[1][3].plot( self.episode_step, self.state[2], 'xb' )
+            #self.viewer[1][3].plot( self.episode_step, self.target_state[2], 'om' )
+        else:
+            print("Not supported")
+        plt.draw()
         plt.pause(0.001)
         #pass
 
@@ -262,7 +325,7 @@ register(
 # Random Agent
 #
 def random_agent(n_steps=100, render=False, ctrl=None):
-    env = onedof()
+    env = onedof(target_ctrl=0)
 
     print(env.observation_space)
     print(env.action_space)
@@ -274,8 +337,8 @@ def random_agent(n_steps=100, render=False, ctrl=None):
     ep_rwd = 0
     for _ in range(n_steps):
         # Random action
-        if ctrl:
-            action = ctrl
+        if ctrl is not None:
+            action = np.array(float(ctrl))
         else:
             action = env.action_space.sample()
         obs, reward, done, info = env.step(action)
@@ -285,7 +348,7 @@ def random_agent(n_steps=100, render=False, ctrl=None):
             env.render()
 
         #from IPython import embed; embed()
-        print(f"Pos: {obs[0].item():.2f}, Error={info['error'].item():.2f}, Step_Reward={reward:.2f}, Ep_Reward={ep_rwd:.2f}")
+        print(f"Pos: {obs[0]}, delta_position={info['delta_position']}, Step_Reward={reward:.2f}, Ep_Reward={ep_rwd:.2f}")
         if done:
             print(f"\tTerm_reward={info['term_reward']:.2f}")
             ep_rwd = 0
