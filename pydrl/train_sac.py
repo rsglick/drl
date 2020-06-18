@@ -74,7 +74,7 @@ hyperparams_dict = {
     'learning_rate': 3.0e-4,
     'buffer_size': 1000000,
     'gamma': 0.99,
-    'batch_size':256,
+    'batch_size':10000,  #256,
     'tau': 0.005,
     'device':'cuda',
     'seed':0,
@@ -144,12 +144,13 @@ for i in range(timesteps):
     saved_epRollingReward.append(epRollingReward)
 
     if dones:
-        pbar.write(f"Ep{num_episodes} EpReward = {epRollingReward:.2f},\
-                EpLen = {eplen}, MissDis = {info['delta_position']}",)
-
         epMissDistance.append(info["delta_position"])
-        if info["delta_position"] < 0.05:
+        if abs(info["delta_position"]) < 0.05:
             hit_counter += 1
+
+        pbar.write(f"Ep{num_episodes} EpReward = {epRollingReward:.2f},\
+                EpLen = {eplen}, MissDis = {info['delta_position']}, Hits = {hit_counter}",)
+
 
         saved_ep_num.append(num_episodes)
         num_episodes += 1 
@@ -201,6 +202,21 @@ act_in_ep = np.split(np.array(saved_acts), max_eps)
 rew_in_ep = np.split(np.array(saved_epRollingReward), max_eps)
 steps     = np.linspace(0, 1, 100)
 
+fig, ax = plt.subplots(1, sharex=True)
+for i in range(len(pos_in_ep)):
+    ax.plot( steps, pos_in_ep[i] )
+    ax.plot( steps, - 0.05 * np.ones_like(steps), '--r' )
+    ax.plot( steps,   0.05 * np.ones_like(steps), '--r' )
+ax.set_title("Position")
+fig.savefig("pos_by_ep.png")
+
+fig, ax = plt.subplots(1, sharex=True)
+for i in range(len(acc_in_ep)):
+    ax.plot( steps, acc_in_ep[i] )
+ax.set_title("Acceleration")
+fig.savefig("acc_by_ep.png")
+
+
 fig, ax = plt.subplots(4, sharex=True)
 for i in range(len(pos_in_ep)):
     ax[0].plot( steps, pos_in_ep[i] )
@@ -210,13 +226,13 @@ for i in range(len(pos_in_ep)):
 ax[0].set_title("Position")
 ax[1].set_title("Velocity")
 ax[2].set_title("Acceleration")
-#fig.savefig("states_by_ep.png")
+fig.savefig("states_by_ep.png")
 
 fig, ax = plt.subplots(1, sharex=True)
 for i in range(len(pos_in_ep)):
     ax.plot( steps, rew_in_ep[i] )
 ax.set_title("Ep Reward")
-#fig.savefig("reward_by_ep.png")
+fig.savefig("reward_by_ep.png")
 
 
 #if __name__ == "__main__":

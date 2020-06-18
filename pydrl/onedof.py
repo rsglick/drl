@@ -18,7 +18,8 @@ class onedof(gym.Env):
     reward_range = (-float('inf'), float('inf'))
 
     def __init__(self, ctrl_limit=10, seed=None, n_axis=1,
-                 total_time=1, dt=0.01, integration="euler", 
+                 total_time=1, dt=0.01, integration="euler",
+                 state_start_pos=None,
                  target_start_pos=0, target_ctrl=0,
                  custom_reward_fn=None):
         self.seed(seed)
@@ -32,13 +33,17 @@ class onedof(gym.Env):
         self.integration       = integration
         self.custom_reward_fn  = custom_reward_fn
 
-
         #
         # Initialize state
         #   states: Position, Velocity, Acceleration
         #
         self.n_axis = n_axis
-        pos = np.random.uniform(-1, 1, self.n_axis)
+        self.state_start_pos = state_start_pos
+        if self.state_start_pos is not None:
+            pos = np.array([self.state_start_pos], dtype='float64')
+        else:
+            pos = np.random.uniform(-1, 1, self.n_axis)
+
         vel = np.zeros_like(pos)
         acc = np.zeros_like(pos)
         self.init_states = np.array( [pos, vel, acc] ).flatten()
@@ -133,21 +138,26 @@ class onedof(gym.Env):
                 to significantly longer training iterations.
             Reward Terminal
                 This reward should give large bonus for achieving goal
-            If at end of the episode, the pos is at aimpoint, give +++reward
-            If at end of the episode, the pos is not at aimpoint, give ---reward
             """
+            #from IPython import embed; embed()
+
             reward = 0.0
 
             # Reward shaping to reduce overall ctrl usage
-            reward_gain = 0.001
-            reward     += - reward_gain * self.ctrl[0] * self.ctrl[0]
+            reward_gain  = 0.001
+            reward      += - reward_gain * self.ctrl[0] * self.ctrl[0] * self.dt
 
             # Reward shaping to reduce dramatic changes in ctrl 
-            #reward_gain = 0.10
-            #reward += - reward_gain * np.abs( previous_ctrl - self.ctrl[0] )
+            reward_gain  = 0.10
+            reward      += - reward_gain * np.abs( previous_ctrl - self.ctrl[0] )
+
+            ## Reward shaping to reduce direction changes in ctrl
+            #reward_gain  = 0.01
+            #ctrl_sign    = np.sign(previous_ctrl * self.ctrl[0])
+            #reward      += reward_gain * ctrl_sign
 
             # Terminal Rewards
-            term_reward =  0.0
+            term_reward =   0.0
             reward_gain = 100.0
             if self.episode_step == self.max_episode_steps:
                 term_reward = ( - reward_gain * delta_position * delta_position).item()
@@ -180,18 +190,9 @@ class onedof(gym.Env):
             self.target_state = euler( target_last_state, self.target_ctrl, self.dt )
 
         # Delta Pos and Vel
-        delta_position = self.target_state[0] - self.state[0]
-        delta_velocity = self.target_state[1] - self.state[1]
+        delta_position = np.abs(self.target_state[0] - self.state[0])
+        delta_velocity = np.abs(self.target_state[1] - self.state[1])
         
-        ### Distance between target and vehicle
-        ##r_tm = np.sqrt( ( delta_position ** 2 ) )
-        ##
-        ### closing velocity 
-        ##vc = - ( delta_position * delta_velocity ) / r_tm
-
-        ### line of sight rate
-        ##los_rate = (delta_position * delta_velocity)/r_tm**2
-
         # Reward Function
         if self.custom_reward_fn is None:
             reward, info = basic_reward_function()
@@ -218,7 +219,10 @@ class onedof(gym.Env):
         # Initialize state
         #   states: Position, Velocity, Acceleration
         #
-        pos = np.random.uniform(-1, 1, self.n_axis)
+        if self.state_start_pos is not None:
+            pos = np.array([self.state_start_pos])
+        else:
+            pos = np.random.uniform(-1, 1, self.n_axis)
         vel = np.zeros_like(pos)
         acc = np.zeros_like(pos)
         self.init_states = np.array( [pos, vel, acc] ).flatten()
