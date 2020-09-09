@@ -1,0 +1,59 @@
+conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+
+  cudatoolkit        pkgs/main/linux-64::cudatoolkit-10.2.89-hfd86e86_1
+  ninja              pkgs/main/linux-64::ninja-1.10.1-py38hfd86e86_0
+  pytorch            pytorch/linux-64::pytorch-1.6.0-py3.8_cuda10.2.89_cudnn7.6.5_0
+  torchvision        pytorch/linux-64::torchvision-0.7.0-py38_cu102
+
+
+conda install tensorboard
+
+  absl-py            pkgs/main/linux-64::absl-py-0.9.0-py38_0
+  blinker            pkgs/main/linux-64::blinker-1.4-py38_0
+  c-ares             pkgs/main/linux-64::c-ares-1.15.0-h7b6447c_1001
+  cachetools         pkgs/main/noarch::cachetools-4.1.1-py_0
+  google-auth        pkgs/main/noarch::google-auth-1.21.1-py_0
+  google-auth-oauth~ pkgs/main/noarch::google-auth-oauthlib-0.4.1-py_2
+  grpcio             pkgs/main/linux-64::grpcio-1.31.0-py38hf8bcb03_0
+  libprotobuf        pkgs/main/linux-64::libprotobuf-3.12.4-hd408876_0
+  markdown           pkgs/main/linux-64::markdown-3.2.2-py38_0
+  oauthlib           pkgs/main/noarch::oauthlib-3.1.0-py_0
+  protobuf           pkgs/main/linux-64::protobuf-3.12.4-py38he6710b0_0
+  pyasn1             pkgs/main/noarch::pyasn1-0.4.8-py_0
+  pyasn1-modules     pkgs/main/noarch::pyasn1-modules-0.2.7-py_0
+  pyjwt              pkgs/main/linux-64::pyjwt-1.7.1-py38_0
+  requests-oauthlib  pkgs/main/noarch::requests-oauthlib-1.3.0-py_0
+  rsa                pkgs/main/noarch::rsa-4.6-py_0
+  tensorboard        pkgs/main/noarch::tensorboard-2.2.1-pyh532a8cf_0
+  tensorboard-plugi~ pkgs/main/noarch::tensorboard-plugin-wit-1.6.0-py_0
+
+conda install tensorflow (this installs tensorboard anyway)
+
+  _tflow_select      pkgs/main/linux-64::_tflow_select-2.3.0-mkl
+  absl-py            pkgs/main/linux-64::absl-py-0.9.0-py38_0
+  astunparse         pkgs/main/noarch::astunparse-1.6.3-py_0
+  blinker            pkgs/main/linux-64::blinker-1.4-py38_0
+  c-ares             pkgs/main/linux-64::c-ares-1.15.0-h7b6447c_1001
+  cachetools         pkgs/main/noarch::cachetools-4.1.1-py_0
+  gast               pkgs/main/noarch::gast-0.3.3-py_0
+  google-auth        pkgs/main/noarch::google-auth-1.21.1-py_0
+  google-auth-oauth~ pkgs/main/noarch::google-auth-oauthlib-0.4.1-py_2
+  google-pasta       pkgs/main/noarch::google-pasta-0.2.0-py_0
+  grpcio             pkgs/main/linux-64::grpcio-1.31.0-py38hf8bcb03_0
+  keras-preprocessi~ pkgs/main/noarch::keras-preprocessing-1.1.0-py_1
+  libprotobuf        pkgs/main/linux-64::libprotobuf-3.12.4-hd408876_0
+  markdown           pkgs/main/linux-64::markdown-3.2.2-py38_0
+  oauthlib           pkgs/main/noarch::oauthlib-3.1.0-py_0
+  opt_einsum         pkgs/main/noarch::opt_einsum-3.1.0-py_0
+  protobuf           pkgs/main/linux-64::protobuf-3.12.4-py38he6710b0_0
+  pyasn1             pkgs/main/noarch::pyasn1-0.4.8-py_0
+  pyasn1-modules     pkgs/main/noarch::pyasn1-modules-0.2.7-py_0
+  pyjwt              pkgs/main/linux-64::pyjwt-1.7.1-py38_0
+  requests-oauthlib  pkgs/main/noarch::requests-oauthlib-1.3.0-py_0
+  rsa                pkgs/main/noarch::rsa-4.6-py_0
+  tensorboard        pkgs/main/noarch::tensorboard-2.2.1-pyh532a8cf_0
+  tensorboard-plugi~ pkgs/main/noarch::tensorboard-plugin-wit-1.6.0-py_0
+  tensorflow         pkgs/main/linux-64::tensorflow-2.2.0-mkl_py38h6d3daf0_0
+  tensorflow-base    pkgs/main/linux-64::tensorflow-base-2.2.0-mkl_py38h5059a2d_0
+  tensorflow-estima~ pkgs/main/noarch::tensorflow-estimator-2.2.0-pyh208ff02_0
+  termcolor          pkgs/main/linux-64::termcolor-1.1.0-py38_1
