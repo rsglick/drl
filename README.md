@@ -11,4 +11,9 @@ Libraries used as a reference:  <br />
 * OpenAI Spinning Up - https://github.com/openai/spinningup <br />
 * CleanRL - https://github.com/vwxyzjn/cleanrl <br />
 
+References:
+* Lillian's Blog - https://lilianweng.github.io/lil-log <br />
+* OpenAI Spinning Up Doc - https://spinningup.openai.com/ <br />
+* SLM Lab - https://slm-lab.gitbook.io/slm-lab/ <br />
+
 Thank you to these library developers for their hard work!
